@@ -53,8 +53,8 @@ void loop() {
   // Call the animation for "SMART HIDROPONIK"
   //animateText("SMART HIDROPONIK - [PwZ]");
 
-  if (phValue > 6) {digitalWrite(RELAY_PIN, HIGH);}
-  else if (phValue < 5) {digitalWrite(RELAY_PIN, LOW);}
+  if (pHValue > 6) {digitalWrite(RELAY_PIN, HIGH);}
+  else if (pHValue < 5) {digitalWrite(RELAY_PIN, LOW);}
 
   digitalWrite(RELAY_PIN, LOW);
 
