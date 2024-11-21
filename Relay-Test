@@ -1,0 +1,13 @@
+const int RELAY_PIN = 5; // Pin untuk relay
+
+void setup() {
+  pinMode(RELAY_PIN, OUTPUT); // Atur pin relay sebagai output
+  digitalWrite(RELAY_PIN, LOW); // Relay mati
+}
+
+void loop() {
+  digitalWrite(RELAY_PIN, HIGH); // Relay nyala
+  delay(5000);                   // Delay 5 detik
+  digitalWrite(RELAY_PIN, LOW);  // Relay mati
+  delay(5000);                   // Delay 5 detik
+}
