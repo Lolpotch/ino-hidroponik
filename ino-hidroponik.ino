@@ -1,9 +1,18 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <RTClib.h>
+#include <SimpleTimer.h>
 
-#define SensorPin A0 // Connect the pH sensor to analog pin A0
-#define Offset 0.00  // Calibration offset (adjust as needed)
+SimpleTimer timer;
+
+float calibration_value = 15.00 - 0.31;
+
+int pHsensor = A1;
+int phval = 0; 
+unsigned long int avgval; 
+int buffer_arr[10],temp;
+
+float ph_act;
 
 RTC_DS3231 rtc;
 
@@ -19,8 +28,10 @@ float voltage, pHValue;
 void setup() {
   Serial.begin(9600);
 
-  pinMode(SensorPin, INPUT);
+  pinMode(pHsensor, INPUT);
   pinMode(RELAY_PIN, OUTPUT);
+  
+  timer.setInterval(500L, display_pHValue);
   
 
   // Inisialisasi LCD
@@ -50,11 +61,8 @@ void loop() {
   
   DisplayTime();
 
-  // Call the animation for "SMART HIDROPONIK"
-  //animateText("SMART HIDROPONIK - [PwZ]");
-
   if (pHValue > 6) {digitalWrite(RELAY_PIN, HIGH);}
-  else if (pHValue < 5) {digitalWrite(RELAY_PIN, LOW);}
+  else if (pHValue < 5) {digitalWrite(RELAY_PIN, LOW);}x
 
   digitalWrite(RELAY_PIN, LOW);
 
@@ -63,9 +71,36 @@ void loop() {
 
 void ReadPhSensor()
 {
-  int sensorValue = analogRead(SensorPin);
-  voltage = sensorValue * (5.0 / 1024.0); // Convert ADC value to voltage
-  pHValue = 3.5 * voltage + Offset;       // Convert voltage to pH level (adjust multiplier if needed)
+  timer.run(); // Initiates SimpleTimer
+ for(int i=0;i<10;i++) 
+ { 
+  buffer_arr[i]=analogRead(pHsensor);
+  delay(30);
+ }
+ for(int i=0;i<9;i++)
+ {
+ for(int j=i+1;j<10;j++)
+ {
+ if(buffer_arr[i]>buffer_arr[j])
+ {
+ temp=buffer_arr[i];
+ buffer_arr[i]=buffer_arr[j];
+ buffer_arr[j]=temp;
+ }
+ }
+ }
+ avgval=0;
+ for(int i=2;i<8;i++)
+ avgval+=buffer_arr[i];
+ float volt=(float)avgval*5/1024.0/6;  
+ //Serial.print("Voltage: ");
+ //Serial.println(volt);
+  ph_act = -4.90 * volt + calibration_value;
+
+ Serial.print("pH Val: ");
+ Serial.println(ph_act);
+
+ delay(1000);
 }
 
 void DisplayPh()
@@ -75,7 +110,8 @@ void DisplayPh()
   lcd.print(voltage, 2);
   lcd.setCursor(0, 1);
   lcd.print("pH  : ");
-  lcd.print(pHValue, 2);
+  //lcd.print(pHValue, 2);
+  lcd.print(ph_act, 2);
 }
 
 void DisplayTime()
@@ -92,33 +128,6 @@ void DisplayTime()
   lcd.setCursor(15, 1);
   lcd.print(now.hour(), DEC);
   lcd.print(':');
-  if (now.minute() < 10) {
-    lcd.print('0');  // Add a leading zero if minutes are less than 10
-  }
   lcd.print(now.minute(), DEC);
 
-  lcd.setCursor(11, 0);
-  lcd.print('|');
-  lcd.setCursor(11, 1);
-  lcd.print('|');
-  lcd.setCursor(0, 2);
-  lcd.print("-----------+--------");
-}
-
-void animateText(const char *text) {
-  int textLen = strlen(text);  // Get the length of the text
-  int displayWidth = 20;      // Number of columns on the LCD
-  int scrollLength = displayWidth + textLen;
-
-  for (int position = -textLen; position <= displayWidth; position++) {
-    lcd.setCursor(0, 3);
-    for (int i = 0; i < displayWidth; i++) {
-      if (position + i >= 0 && position + i < textLen) {
-        lcd.print(text[position + i]);
-      } else {
-        lcd.print(' '); // Fill with spaces
-      }
-    }
-    delay(200); // Adjust speed of animation
-  }
 }
