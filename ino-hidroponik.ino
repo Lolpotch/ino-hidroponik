@@ -1,9 +1,9 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <RTClib.h>
-#include <SimpleTimer.h>
+//#include <SimpleTimer.h>
 
-SimpleTimer timer;
+//SimpleTimer timer;
 
 float calibration_value = 15.00 - 0.31;
 
@@ -18,7 +18,7 @@ RTC_DS3231 rtc;
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);  // Alamat I2C LCD (0x27), dengan ukuran 16x2
 
-const int RELAY_PIN = 4;
+const int DC_PIN = 4;
 
 float voltage, pHValue;
 
@@ -29,16 +29,16 @@ void setup() {
   Serial.begin(9600);
 
   pinMode(pHsensor, INPUT);
-  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(DC_PIN, OUTPUT);
   
-  timer.setInterval(500L, display_pHValue);
+  //timer.setInterval(500L, display_pHValue);
   
 
   // Inisialisasi LCD
   lcd.init();         // Gunakan lcd.init() untuk menginisialisasi LCD
   lcd.backlight();    // Mengaktifkan backlight LCD
 
-  digitalWrite(RELAY_PIN, HIGH);
+  digitalWrite(DC_PIN, LOW);
 
   // // Inisialisasi RTC
   if (! rtc.begin()) {
@@ -61,17 +61,13 @@ void loop() {
   
   DisplayTime();
 
-  if (pHValue > 6) {digitalWrite(RELAY_PIN, HIGH);}
-  else if (pHValue < 5) {digitalWrite(RELAY_PIN, LOW);}x
-
-  digitalWrite(RELAY_PIN, LOW);
+  DCSet();
 
   delay(1000);
 }
 
 void ReadPhSensor()
 {
-  timer.run(); // Initiates SimpleTimer
  for(int i=0;i<10;i++) 
  { 
   buffer_arr[i]=analogRead(pHsensor);
@@ -130,4 +126,10 @@ void DisplayTime()
   lcd.print(':');
   lcd.print(now.minute(), DEC);
 
+}
+
+void DCSet()
+{
+  if (pHValue > 6) {digitalWrite(DC_PIN, HIGH);}
+  else if (pHValue < 5) {digitalWrite(DC_PIN, LOW);}
 }
