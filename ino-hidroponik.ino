@@ -25,7 +25,7 @@ RTC_DS3231 rtc;
 LiquidCrystal_I2C lcd(0x27, 20, 4);  // Alamat I2C LCD (0x27), dengan ukuran 16x2
 
 const int DC_PIN = 4;
-const int RELAY_PIN = 2; // Relay pada pin 2
+const int SELENOID_PIN = 2; // Relay pada pin 2
 
 float voltage, pHValue;
 
@@ -74,7 +74,7 @@ void loop() {
 
   DCSet();
 
-  nyobaRelay();
+  SelenoidSet();
 
   ReadSoilMoisture();  
 
@@ -143,8 +143,8 @@ void DisplayTime()
 
 void DCSet()
 {
-  if (pHValue > 6) {digitalWrite(DC_PIN, HIGH);}
-  else if (pHValue < 5) {digitalWrite(DC_PIN, LOW);}
+  if (pHValue > 6) {digitalWrite(DC_PIN, LOW);}
+  else if (pHValue < 5) {digitalWrite(DC_PIN, HIGH);}
 }
 
 unsigned long previousMillis = 0;    // Untuk menyimpan waktu sebelumnya
@@ -152,7 +152,7 @@ unsigned long interval = 5000;      // Interval nyala atau mati (5 detik)
 bool relayState = false;            // Status relay (true = nyala, false = mati)
 unsigned long relayStartMillis = 0; // Waktu mulai relay aktif atau nonaktif
 
-void nyobaRelay() {
+void SelenoidSet() {
     DateTime now = rtc.now();              // Ambil waktu saat ini dari RTC
     int currentHour = now.hour();          // Ambil jam saat ini
     unsigned long currentMillis = millis(); // Ambil waktu saat ini dalam millis
@@ -161,7 +161,7 @@ void nyobaRelay() {
         // Pagi/Siang: Relay menyala terus
         if (!relayState) {
             relayState = true;
-            digitalWrite(RELAY_PIN, HIGH);
+            digitalWrite(SELENOID_PIN, LOW);
             relayStartMillis = currentMillis; // Catat waktu mulai menyala
             Serial.println("Relay menyala terus (Pagi/Siang)");
         }
@@ -172,7 +172,7 @@ void nyobaRelay() {
 
             // Toggle status relay
             relayState = !relayState; 
-            digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
+            digitalWrite(SELENOID_PIN, relayState ? HIGH : LOW);
 
             // Hitung durasi nyala/mati
             unsigned long duration = currentMillis - relayStartMillis;
