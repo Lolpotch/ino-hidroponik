@@ -1,4 +1,4 @@
-int soilMoisturePin = A2; // Sensor kelembaban tanah terhubung ke pin A2
+int soilMoisturePin = A0; // Sensor kelembaban tanah terhubung ke pin A2
 int soilMoistureValue = 0; // Variabel untuk menyimpan nilai kelembaban
 int dryThreshold = 600;   // Threshold untuk kondisi kering (adjust sesuai sensor)
 int wetThreshold = 300;   // Threshold untuk kondisi basah (adjust sesuai sensor)
