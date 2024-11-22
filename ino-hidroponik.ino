@@ -12,13 +12,14 @@ int phval = 0;
 unsigned long int avgval; 
 int buffer_arr[10],temp;
 
-float ph_act;
+float ph_act, volt;
 
 RTC_DS3231 rtc;
 
 LiquidCrystal_I2C lcd(0x27, 20, 4);  // Alamat I2C LCD (0x27), dengan ukuran 16x2
 
 const int DC_PIN = 4;
+const int RELAY_PIN = 2; // Relay pada pin 2
 
 float voltage, pHValue;
 
@@ -63,6 +64,8 @@ void loop() {
 
   DCSet();
 
+  nyobaRelay();
+
   delay(1000);
 }
 
@@ -88,7 +91,7 @@ void ReadPhSensor()
  avgval=0;
  for(int i=2;i<8;i++)
  avgval+=buffer_arr[i];
- float volt=(float)avgval*5/1024.0/6;  
+ volt=(float)avgval*5/1024.0/6;  
  //Serial.print("Voltage: ");
  //Serial.println(volt);
   ph_act = -4.90 * volt + calibration_value;
@@ -103,7 +106,7 @@ void DisplayPh()
 {
   lcd.setCursor(0, 0);
   lcd.print("Volt: ");
-  lcd.print(voltage, 2);
+  lcd.print(volt, 2);
   lcd.setCursor(0, 1);
   lcd.print("pH  : ");
   //lcd.print(pHValue, 2);
@@ -132,4 +135,49 @@ void DCSet()
 {
   if (pHValue > 6) {digitalWrite(DC_PIN, HIGH);}
   else if (pHValue < 5) {digitalWrite(DC_PIN, LOW);}
+}
+
+unsigned long previousMillis = 0;    // Untuk menyimpan waktu sebelumnya
+unsigned long interval = 5000;      // Interval nyala atau mati (5 detik)
+bool relayState = false;            // Status relay (true = nyala, false = mati)
+unsigned long relayStartMillis = 0; // Waktu mulai relay aktif atau nonaktif
+
+void nyobaRelay() {
+    DateTime now = rtc.now();              // Ambil waktu saat ini dari RTC
+    int currentHour = now.hour();          // Ambil jam saat ini
+    unsigned long currentMillis = millis(); // Ambil waktu saat ini dalam millis
+
+    if (currentHour >= 6 && currentHour < 11) {
+        // Pagi/Siang: Relay menyala terus
+        if (!relayState) {
+            relayState = true;
+            digitalWrite(RELAY_PIN, HIGH);
+            relayStartMillis = currentMillis; // Catat waktu mulai menyala
+            Serial.println("Relay menyala terus (Pagi/Siang)");
+        }
+    } else {
+        // Malam hari: Relay nyala dan mati bergantian
+        if (currentMillis - previousMillis >= interval) {
+            previousMillis = currentMillis; // Reset waktu sebelumnya
+
+            // Toggle status relay
+            relayState = !relayState; 
+            digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
+
+            // Hitung durasi nyala/mati
+            unsigned long duration = currentMillis - relayStartMillis;
+
+            // Cetak status dinamis ke Serial Monitor
+            if (relayState) {
+                Serial.print("Relay nyala selama ");
+            } else {
+                Serial.print("Relay mati selama ");
+            }
+            Serial.print(duration / 1000); // Konversi milidetik ke detik
+            Serial.println(" detik.");
+
+            // Reset waktu mulai
+            relayStartMillis = currentMillis;
+        }
+    }
 }
