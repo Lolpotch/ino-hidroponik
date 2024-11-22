@@ -1,7 +1,11 @@
+#include <LiquidCrystal_I2C.h>
+
 int soilMoisturePin = A0; // Sensor kelembaban tanah terhubung ke pin A2
 int soilMoistureValue = 0; // Variabel untuk menyimpan nilai kelembaban
-int dryThreshold = 600;   // Threshold untuk kondisi kering (adjust sesuai sensor)
-int wetThreshold = 300;   // Threshold untuk kondisi basah (adjust sesuai sensor)
+int dryThreshold = 800;   // Threshold untuk kondisi kering (adjust sesuai sensor)
+int wetThreshold = 400;   // Threshold untuk kondisi basah (adjust sesuai sensor)
+
+LiquidCrystal_I2C lcd(0x27, 20, 4);  // Alamat I2C LCD (0x27), dengan ukuran 16x2
 
 void setup() {
     // Kode setup utama tetap
@@ -11,23 +15,9 @@ void setup() {
     lcd.init();         // Inisialisasi LCD
     lcd.backlight();    // Aktifkan backlight LCD
 
-    // Inisialisasi RTC
-    if (!rtc.begin()) {
-        Serial.println("Tidak bisa menemukan RTC");
-        while (1);
-    }
-
-    if (rtc.lostPower()) {
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    }
 }
 
 void loop() {
-    ReadPhSensor();
-    DisplayPh();
-    DisplayTime();
-    DCSet();
-    nyobaRelay();
     ReadSoilMoisture();  // Tambahkan fungsi ini
     DisplaySoilMoisture(); // Tambahkan fungsi ini
     delay(1000);
@@ -46,10 +36,13 @@ void DisplaySoilMoisture() {
     lcd.print("Soil: ");
     
     if (soilMoistureValue > dryThreshold) {
+        Serial.println("dry");
         lcd.print("Dry  ");
     } else if (soilMoistureValue < wetThreshold) {
+        Serial.println("wet");
         lcd.print("Wet  ");
     } else {
+        Serial.println("moist");
         lcd.print("Moist");
     }
 
