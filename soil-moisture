@@ -23,6 +23,11 @@ void setup() {
 }
 
 void loop() {
+    ReadPhSensor();
+    DisplayPh();
+    DisplayTime();
+    DCSet();
+    nyobaRelay();
     ReadSoilMoisture();  // Tambahkan fungsi ini
     DisplaySoilMoisture(); // Tambahkan fungsi ini
     delay(1000);
