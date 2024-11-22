@@ -85,35 +85,31 @@ void loop() {
 
 void ReadPhSensor()
 {
- for(int i=0;i<10;i++) 
- { 
-  buffer_arr[i]=analogRead(pHsensor);
-  delay(30);
- }
- for(int i=0;i<9;i++)
- {
- for(int j=i+1;j<10;j++)
- {
- if(buffer_arr[i]>buffer_arr[j])
- {
- temp=buffer_arr[i];
- buffer_arr[i]=buffer_arr[j];
- buffer_arr[j]=temp;
- }
- }
- }
- avgval=0;
- for(int i=2;i<8;i++)
- avgval+=buffer_arr[i];
- volt=(float)avgval*5/1024.0/6;  
- //Serial.print("Voltage: ");
- //Serial.println(volt);
-  ph_act = -4.90 * volt + calibration_value;
+ for (int i = 0; i < 10; i++) { 
+        buffer_arr[i] = analogRead(pHsensor);
+        delay(30);
+    }
 
- Serial.print("pH Val: ");
- Serial.println(ph_act);
+    for (int i = 0; i < 9; i++) {
+        for (int j = i + 1; j < 10; j++) {
+            if (buffer_arr[i] > buffer_arr[j]) {
+                temp = buffer_arr[i];
+                buffer_arr[i] = buffer_arr[j];
+                buffer_arr[j] = temp;
+            }
+        }
+    }
 
- delay(1000);
+    avgval = 0;
+    for (int i = 2; i < 8; i++) {
+        avgval += buffer_arr[i];
+    }
+
+    float volt = (float)avgval * 5 / 1024.0 / 6;  
+    ph_act = -4.90 * volt + calibration_value;
+
+    Serial.print("pH Val: ");
+    Serial.println(ph_act);
 }
 
 void DisplayPh()
