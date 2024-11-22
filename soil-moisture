@@ -1,0 +1,54 @@
+int soilMoisturePin = A2; // Sensor kelembaban tanah terhubung ke pin A2
+int soilMoistureValue = 0; // Variabel untuk menyimpan nilai kelembaban
+int dryThreshold = 600;   // Threshold untuk kondisi kering (adjust sesuai sensor)
+int wetThreshold = 300;   // Threshold untuk kondisi basah (adjust sesuai sensor)
+
+void setup() {
+    // Kode setup utama tetap
+    Serial.begin(9600);
+    pinMode(soilMoisturePin, INPUT);
+    
+    lcd.init();         // Inisialisasi LCD
+    lcd.backlight();    // Aktifkan backlight LCD
+
+    // Inisialisasi RTC
+    if (!rtc.begin()) {
+        Serial.println("Tidak bisa menemukan RTC");
+        while (1);
+    }
+
+    if (rtc.lostPower()) {
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    }
+}
+
+void loop() {
+    ReadSoilMoisture();  // Tambahkan fungsi ini
+    DisplaySoilMoisture(); // Tambahkan fungsi ini
+    delay(1000);
+}
+
+// Fungsi untuk membaca nilai kelembaban tanah
+void ReadSoilMoisture() {
+    soilMoistureValue = analogRead(soilMoisturePin);
+    Serial.print("Soil Moisture Value: ");
+    Serial.println(soilMoistureValue);
+}
+
+// Fungsi untuk menampilkan status kelembaban tanah pada LCD
+void DisplaySoilMoisture() {
+    lcd.setCursor(0, 2); // Baris ketiga LCD
+    lcd.print("Soil: ");
+    
+    if (soilMoistureValue > dryThreshold) {
+        lcd.print("Dry  ");
+    } else if (soilMoistureValue < wetThreshold) {
+        lcd.print("Wet  ");
+    } else {
+        lcd.print("Moist");
+    }
+
+    lcd.setCursor(0, 3); // Baris keempat untuk nilai sensor
+    lcd.print("Value: ");
+    lcd.print(soilMoistureValue);
+}
