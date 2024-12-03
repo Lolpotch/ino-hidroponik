@@ -5,7 +5,11 @@
 
 float calibration = 0.00; //change this value to calibrate
 const int analogInPin = A0;
-float ph_act, volt;
+int sensorValue = 0;
+unsigned long int avgValue;
+float b;
+float pHVol, pHValue;
+int buf[10],temp;
 
 const int DC_PIN = 4;
 const int RELAY_PIN = 2; // Relay pada pin 2
@@ -82,24 +86,45 @@ void loop() {
 }
 
 void ReadPhSensor() {
-  float anValue = analogRead(analogInPin);
-  float pHVol = anValue*(5.0/1023.0);
-  float phValue = ((pHVol / 5.0) * 14.0) - calibration;
+  for(int i=0;i<10;i++)
+  {
+    buf[i]=analogRead(analogInPin);
+    delay(30);
+  }
+  for(int i=0;i<9;i++)
+    {
+    for(int j=i+1;j<10;j++)
+    {
+      if(buf[i]>buf[j])
+      {
+        temp=buf[i];
+        buf[i]=buf[j];
+        buf[j]=temp;
+      }
+    }
+  }
   
-  Serial.println(anValue);
+  avgValue=0;
+  
+  for(int i=2;i<8;i++)
+  
+  avgValue+=buf[i];
+  
+  pHVol=(float)avgValue*5.0/1024/6;
+  
+  pHValue = pHVol/5.0 * 14.0 + calibration;
+  
   Serial.println(pHVol);
-  Serial.println(phValue);
-  
-  delay(500);
+  Serial.println(pHValue);
 }
 
 void DisplayPh() {
   lcd.setCursor(0, 0);
   lcd.print("Volt: ");
-  lcd.print(volt, 2);
+  lcd.print(pHVol, 2);
   lcd.setCursor(0, 1);
   lcd.print("pH  : ");
-  lcd.print(ph_act, 2);
+  lcd.print(pHValue, 2);
 }
 
 void DisplayTime() {
@@ -119,9 +144,9 @@ void DisplayTime() {
 }
 
 void DCSet() {
-  if (ph_act > 6) {
+  if (pHValue > 6) {
     digitalWrite(DC_PIN, HIGH);
-  } else if (ph_act < 5) {
+  } else if (pHValue < 5) {
     digitalWrite(DC_PIN, LOW);
   }
 }
