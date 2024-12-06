@@ -1,12 +1,17 @@
-const int DC_PIN = 4;
+#include <L298N.h>
+
+const int EN_A = 10;
+const int IN_1 = 8;
+const int IN_2 = 9;
+L298N driver(EN_A,IN_1,IN_2);
+
 const int RELAY_PIN = 2; // Relay pada pin 2
 
 void setup()
 {
-  pinMode(DC_PIN, OUTPUT);
   pinMode(RELAY_PIN, OUTPUT);
-  digitalWrite(DC_PIN, LOW);
-  digitalWrite(RELAY_PIN, HIGH);
+  pinMode(IN_1, OUTPUT);
+  pinMode(IN_2, OUTPUT);
 
   // Initialize Serial Communication
   Serial.begin(9600);
@@ -23,13 +28,16 @@ void loop()
     if (input.equalsIgnoreCase("1")) 
     {
       digitalWrite(RELAY_PIN, LOW); // Relay active
-      digitalWrite(DC_PIN, LOW);
+      digitalWrite(IN_1, LOW);
+      digitalWrite(IN_2, LOW);
+      
       Serial.println("Relay is ON.");
     }
     else if (input.equalsIgnoreCase("0")) 
     {
       digitalWrite(RELAY_PIN, HIGH); // Relay inactive
-      digitalWrite(DC_PIN, HIGH);
+      digitalWrite(IN_1, HIGH);
+      digitalWrite(IN_2, LOW);
       Serial.println("Relay is OFF.");
     }
     else 
