@@ -6,13 +6,14 @@
 const int EN_A = 10;
 const int IN_1 = 8;
 const int IN_2 = 9;
+
 L298N driver(EN_A,IN_1,IN_2);
 
 const int analogInPin = A0;
 int sensorValue = 0;
 float pHVol, pHValue;
-float PH7Vol = 2.51;
-float PH4Vol = 3.85;
+float PH9Vol = 3.20;
+float PH4Vol = 3.82;
 float PH_step;
 
 const int DC_PIN = 4;
@@ -34,7 +35,7 @@ void setup() {
   lcd.init();       // Inisialisasi LCD
   lcd.backlight();    // Aktifkan backlight LCD
 
-  PH_step = (PH4Vol - PH7Vol) / 3;
+  PH_step = (PH4Vol - PH9Vol) / 5;
 
   //Inisialisasi RTC
   if (!rtc.begin()) {
@@ -49,7 +50,7 @@ void setup() {
   }
 
   lcd.setCursor(0, 3);
-  lcd.print("KISAKI IMUT WANGYY!!");
+  lcd.print("SMART HIDROPONIK");
 }
 
 void loop() {
@@ -61,12 +62,20 @@ void loop() {
   delay(3000);
 }
 
+// void ReadPhSensor() {
+//   sensorValue = analogRead(analogInPin);
+//   pHVol = (float)sensorValue*5.0/1024;
+
+//   pHValue = 7.00 + ((PH9Vol - PH4Vol) / PH_step);
+
+// }
+
 void ReadPhSensor() {
   sensorValue = analogRead(analogInPin);
-  pHVol = (float)sensorValue*5.0/1024;
+  pHVol = (float)sensorValue * 5.0 / 1024; // Konversi nilai analog ke tegangan (0-5V)
 
-  pHValue = 7.00 + ((PH7Vol - pHVol) / PH_step);
-
+  // Hitung nilai pH berdasarkan kalibrasi
+  pHValue = 4.0 + (pHVol - PH4Vol) / (PH9Vol - PH4Vol) * (9.18 - 4.01);
 }
 
 void DisplayPh() {
@@ -95,7 +104,7 @@ void DisplayTime() {
 }
 
 void DCSet() {
-  if (true) {
+  if (pHValue > 6.00) {
     digitalWrite(IN_1, HIGH);
     digitalWrite(IN_2, LOW);
   } else if (pHValue < 5.00) {
@@ -114,7 +123,7 @@ void HandleRelay() {
   int currentHour = now.hour();          // Ambil jam saat ini
   unsigned long currentMillis = millis(); // Ambil waktu saat ini dalam millis
 
-  if (false) {
+  if (currentHour > 10 && currentHour < 14) {
     // Pagi/Siang: Relay menyala terus
     if (!relayState) {
       relayState = true;
