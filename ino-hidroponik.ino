@@ -1,130 +1,96 @@
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <RTClib.h>
-//#include <SimpleTimer.h>
+#include <L298N.h>
+#include <SoftwareSerial.h>
 
-//SimpleTimer timer;
+// Define pins for SoftwareSerial
+SoftwareSerial esp8266(2, 3); // RX, TX
 
-float calibration_value = 15.00 - 0.31;
+const int EN_A = 10;
+const int IN_1 = 8;
+const int IN_2 = 9;
 
-int pHsensor = A1;
-int phval = 0; 
-unsigned long int avgval; 
-int buffer_arr[10],temp;
+L298N driver(EN_A,IN_1,IN_2);
 
-int soilMoisturePin = A0; // Sensor kelembaban tanah terhubung ke pin A2
-int soilMoistureValue = 0; // Variabel untuk menyimpan nilai kelembaban
-int dryThreshold = 800;   // Threshold untuk kondisi kering (adjust sesuai sensor)
-int wetThreshold = 400;   // Threshold untuk kondisi basah (adjust sesuai sensor)
+const int analogInPin = A0;
+int sensorValue = 0;
+float pHVol, pHValue;
+float PH9Vol = 3.11;
+float PH4Vol = 3.75;
+float PH_step;
 
-
-float ph_act, volt;
+const int RELAY_PIN = 2; // Relay pada pin 2
 
 RTC_DS3231 rtc;
-
-LiquidCrystal_I2C lcd(0x27, 20, 4);  // Alamat I2C LCD (0x27), dengan ukuran 16x2
-
-const int DC_PIN = 4;
-const int SELENOID_PIN = 2; // Relay pada pin 2
-
-float voltage, pHValue;
-
-// Function for animating text movement from left to right
-
+LiquidCrystal_I2C lcd(0x27, 20, 4); // Alamat I2C LCD (0x27), dengan ukuran 20x4
 
 void setup() {
-  Serial.begin(9600);
+  // Mulai komunikasi serial dengan komputer dan ESP8266
+  Serial.begin(9600);         // Komunikasi dengan Serial Monitor
+  esp8266.begin(9600);      // For communication with ESP8266
 
-  pinMode(pHsensor, INPUT);
-  pinMode(DC_PIN, OUTPUT);
-  pinMode(soilMoisturePin, INPUT);
-    
-    lcd.init();         // Inisialisasi LCD
-    lcd.backlight();    // Aktifkan backlight LCD
+  pinMode(RELAY_PIN, OUTPUT);
 
-  //timer.setInterval(500L, display_pHValue);
-  
+  digitalWrite(RELAY_PIN, LOW);
 
-  // Inisialisasi LCD
-  lcd.init();         // Gunakan lcd.init() untuk menginisialisasi LCD
-  lcd.backlight();    // Mengaktifkan backlight LCD
+  lcd.init();       // Inisialisasi LCD
+  lcd.backlight();    // Aktifkan backlight LCD
 
-  digitalWrite(DC_PIN, LOW);
+  PH_step = (PH4Vol - PH9Vol) / 5;
 
-  // // Inisialisasi RTC
-  if (! rtc.begin()) {
+  //Inisialisasi RTC
+  if (!rtc.begin()) {
     Serial.println("Tidak bisa menemukan RTC");
     while (1);
   }
 
-  // Cek jika RTC perlu diatur ulang
+  //Cek jika RTC perlu diatur ulang
   if (rtc.lostPower()) {
     Serial.println("RTC kehilangan daya, atur ulang waktu!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
+
+  lcd.setCursor(0, 3);
+  lcd.print("SMART HIDROPONIK");
 }
 
-void loop() { 
-
+void loop() {
   ReadPhSensor();
-
   DisplayPh();
-  
   DisplayTime();
-
   DCSet();
-
-  SelenoidSet();
-
-  ReadSoilMoisture();  
-
-  DisplaySoilMoisture(); 
-
-  delay(1000);
+  HandleRelay();
+  SendToEsp();
+  delay(3000);
 }
 
-void ReadPhSensor()
-{
- for (int i = 0; i < 10; i++) { 
-        buffer_arr[i] = analogRead(pHsensor);
-        delay(30);
-    }
+// void ReadPhSensor() {
+//   sensorValue = analogRead(analogInPin);
+//   pHVol = (float)sensorValue*5.0/1024;
 
-    for (int i = 0; i < 9; i++) {
-        for (int j = i + 1; j < 10; j++) {
-            if (buffer_arr[i] > buffer_arr[j]) {
-                temp = buffer_arr[i];
-                buffer_arr[i] = buffer_arr[j];
-                buffer_arr[j] = temp;
-            }
-        }
-    }
+//   pHValue = 7.00 + ((PH9Vol - PH4Vol) / PH_step);
 
-    avgval = 0;
-    for (int i = 2; i < 8; i++) {
-        avgval += buffer_arr[i];
-    }
+// }
 
-    float volt = (float)avgval * 5 / 1024.0 / 6;  
-    ph_act = -4.90 * volt + calibration_value;
+void ReadPhSensor() {
+  sensorValue = analogRead(analogInPin);
+  pHVol = (float)sensorValue * 5.0 / 1024; // Konversi nilai analog ke tegangan (0-5V)
 
-    Serial.print("pH Val: ");
-    Serial.println(ph_act);
+  // Hitung nilai pH berdasarkan kalibrasi
+  pHValue = 4.0 + (pHVol - PH4Vol) / (PH9Vol - PH4Vol) * (9.18 - 4.01);
 }
 
-void DisplayPh()
-{
+void DisplayPh() {
   lcd.setCursor(0, 0);
   lcd.print("Volt: ");
-  lcd.print(volt, 2);
+  lcd.print(pHVol, 2);
   lcd.setCursor(0, 1);
   lcd.print("pH  : ");
-  //lcd.print(pHValue, 2);
-  lcd.print(ph_act, 2);
+  lcd.print(pHValue, 2);
 }
 
-void DisplayTime()
-{
+void DisplayTime() {
   DateTime now = rtc.now();
 
   lcd.setCursor(12, 0);
@@ -133,18 +99,22 @@ void DisplayTime()
   lcd.print(now.month(), DEC);
   lcd.print('/');
   lcd.print(now.year() % 100, DEC);
-  
+
   lcd.setCursor(15, 1);
   lcd.print(now.hour(), DEC);
   lcd.print(':');
   lcd.print(now.minute(), DEC);
-
 }
 
-void DCSet()
-{
-  if (pHValue > 6) {digitalWrite(DC_PIN, LOW);}
-  else if (pHValue < 5) {digitalWrite(DC_PIN, HIGH);}
+void DCSet() {
+  if (pHValue > 6.00) {
+    digitalWrite(IN_1, HIGH);
+    digitalWrite(IN_2, LOW);
+ 
+  } else if (pHValue < 5.00) {
+    digitalWrite(IN_1, LOW);
+    digitalWrite(IN_2, LOW);
+  }
 }
 
 unsigned long previousMillis = 0;    // Untuk menyimpan waktu sebelumnya
@@ -152,69 +122,54 @@ unsigned long interval = 5000;      // Interval nyala atau mati (5 detik)
 bool relayState = false;            // Status relay (true = nyala, false = mati)
 unsigned long relayStartMillis = 0; // Waktu mulai relay aktif atau nonaktif
 
-void SelenoidSet() {
-    DateTime now = rtc.now();              // Ambil waktu saat ini dari RTC
-    int currentHour = now.hour();          // Ambil jam saat ini
-    unsigned long currentMillis = millis(); // Ambil waktu saat ini dalam millis
+void HandleRelay() {
+  DateTime now = rtc.now();              // Ambil waktu saat ini dari RTC
+  int currentHour = now.hour();          // Ambil jam saat ini
+  unsigned long currentMillis = millis(); // Ambil waktu saat ini dalam millis
 
-    if (currentHour >= 6 && currentHour < 11) {
-        // Pagi/Siang: Relay menyala terus
-        if (!relayState) {
-            relayState = true;
-            digitalWrite(SELENOID_PIN, LOW);
-            relayStartMillis = currentMillis; // Catat waktu mulai menyala
-            Serial.println("Relay menyala terus (Pagi/Siang)");
-        }
-    } else {
-        // Malam hari: Relay nyala dan mati bergantian
-        if (currentMillis - previousMillis >= interval) {
-            previousMillis = currentMillis; // Reset waktu sebelumnya
-
-            // Toggle status relay
-            relayState = !relayState; 
-            digitalWrite(SELENOID_PIN, relayState ? HIGH : LOW);
-
-            // Hitung durasi nyala/mati
-            unsigned long duration = currentMillis - relayStartMillis;
-
-            // Cetak status dinamis ke Serial Monitor
-            if (relayState) {
-                Serial.print("Relay nyala selama ");
-            } else {
-                Serial.print("Relay mati selama ");
-            }
-            Serial.print(duration / 1000); // Konversi milidetik ke detik
-            Serial.println(" detik.");
-
-            // Reset waktu mulai
-            relayStartMillis = currentMillis;
-        }
+  if (currentHour > 10 && currentHour < 14) {
+    // Pagi/Siang: Relay menyala terus
+    if (!relayState) {
+      relayState = true;
+      digitalWrite(RELAY_PIN, HIGH);
+      relayStartMillis = currentMillis; // Catat waktu mulai menyala
+      Serial.println("Relay menyala terus (Siang)");
     }
+  } else {
+    // Malam hari: Relay nyala dan mati bergantian
+    if (currentMillis - previousMillis >= interval) {
+      previousMillis = currentMillis; // Reset waktu sebelumnya
+
+      // Toggle status relay
+      relayState = !relayState;
+      digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
+
+      // Hitung durasi nyala/mati
+      unsigned long duration = currentMillis - relayStartMillis;
+
+      // Cetak status dinamis ke Serial Monitor
+      if (relayState) {
+        Serial.print("Relay nyala selama ");
+      } else {
+        Serial.print("Relay mati selama ");
+      }
+      Serial.print(duration / 1000); // Konversi milidetik ke detik
+      Serial.println(" detik.");
+
+      // Reset waktu mulai
+      relayStartMillis = currentMillis;
+    }
+  }
 }
 
-void ReadSoilMoisture() {
-    soilMoistureValue = analogRead(soilMoisturePin);
-    Serial.print("Soil Moisture Value: ");
-    Serial.println(soilMoistureValue);
-}
+void SendToEsp()
+{
+  String data = "Hello ESP8266";
+  esp8266.println(data);    // Send data to ESP8266
 
-// Fungsi untuk menampilkan status kelembaban tanah pada LCD
-void DisplaySoilMoisture() {
-    lcd.setCursor(0, 2); // Baris ketiga LCD
-    lcd.print("Soil: ");
-    
-    if (soilMoistureValue > dryThreshold) {
-        Serial.println("dry");
-        lcd.print("Dry  ");
-    } else if (soilMoistureValue < wetThreshold) {
-        Serial.println("wet");
-        lcd.print("Wet  ");
-    } else {
-        Serial.println("moist");
-        lcd.print("Moist");
-    }
-
-    lcd.setCursor(0, 3); // Baris keempat untuk nilai sensor
-    lcd.print("Value: ");
-    lcd.print(soilMoistureValue);
+  // Optional: Check response from ESP8266
+  if (esp8266.available()) {
+    String response = esp8266.readString();
+    Serial.println("ESP8266 says: " + response);
+  }
 }
