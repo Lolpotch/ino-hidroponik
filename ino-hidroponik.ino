@@ -15,7 +15,7 @@ float PH9Vol = 3.11;
 float PH4Vol = 3.75;
 float PH_step;
 
-const int RELAY_PIN = 2; // Relay pada pin 2
+const int SOLENOID_PIN = 2; // Relay pada pin 2
 
 DateTime now;
 
@@ -27,9 +27,9 @@ void setup() {
   Serial.begin(9600);         // Komunikasi dengan Serial Monitor
   esp8266.begin(9600);      // For communication with ESP8266
 
-  pinMode(RELAY_PIN, OUTPUT);
+  pinMode(SOLENOID_PIN, OUTPUT);
 
-  digitalWrite(RELAY_PIN, LOW);
+  digitalWrite(SOLENOID_PIN, LOW);
 
   lcd.init();       // Inisialisasi LCD
   lcd.backlight();    // Aktifkan backlight LCD
@@ -64,14 +64,6 @@ void loop() {
   SendToEsp();
   delay(3000);
 }
-
-// void ReadPhSensor() {
-//   sensorValue = analogRead(analogInPin);
-//   pHVol = (float)sensorValue*5.0/1024;
-
-//   pHValue = 7.00 + ((PH9Vol - PH4Vol) / PH_step);
-
-// }
 
 void ReadPhSensor() {
   sensorValue = analogRead(analogInPin);
@@ -122,26 +114,15 @@ void HandleRelay() {
 
   if (currentHour > 10 && currentHour < 14) {
     // Pagi/Siang: Relay menyala terus
-      digitalWrite(RELAY_PIN, HIGH);
+      digitalWrite(SOLENOID_PIN, HIGH);
       //Serial.println("Relay menyala terus (Siang)");
   } else {
-      digitalWrite(RELAY_PIN, LOW);
+      digitalWrite(SOLENOID_PIN, LOW);
       //Serial.println("Relay mati (not-siang)");
   }
 }
 
 void SendToEsp()
 {
-  String data = "pH=9";
-  
-  esp8266.println(data);    // Send data to ESP8266
-
-  // Optional: Check response from ESP8266
-  if (esp8266.available()) {
-    String response = esp8266.readString();
-    Serial.println("ESP8266 says: " + response);
-  }
-  else {
-
-  }
+  Serial.println(pHValue);
 }
